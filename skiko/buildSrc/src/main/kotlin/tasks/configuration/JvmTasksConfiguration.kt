@@ -55,7 +55,8 @@ fun SkikoProjectContext.createCompileJvmBindingsTask(
         "src/jvmMain/cpp/common",
         "src/awtMain/cpp/common",
         "src/awtMain/cpp/${targetOs.id}",
-        "src/jvmTest/cpp"
+        "src/jvmTest/cpp",
+        "src/taoMain/cpp/${targetOs.id}"
     )
     sourceRoots.set(srcDirs)
     if (targetOs != OS.Android) includeHeadersNonRecursive(jdkHome.resolve("include"))
@@ -186,7 +187,8 @@ fun SkikoProjectContext.createObjcCompileTask(
     dependsOn(skiaJvmBindingsDir)
 
     val srcDirs = projectDirs(
-        "src/awtMain/objectiveC/${os.id}"
+        "src/awtMain/objectiveC/${os.id}",
+        "src/taoMain/objectiveC/${os.id}"
     )
     sourceRoots.set(srcDirs)
     val jdkHome = File(System.getProperty("java.home") ?: error("'java.home' is null"))

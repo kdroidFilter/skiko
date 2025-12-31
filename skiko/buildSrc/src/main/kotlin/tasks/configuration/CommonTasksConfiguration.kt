@@ -320,8 +320,9 @@ fun KotlinTarget.generateVersion(
     val targetName = this.name
     val isUikitSim = isUikitSimulator()
     val generatedDir = project.layout.buildDirectory.dir("generated/$targetName")
+    val taskId = "generateVersion${toTitleCase(platformType.name)}${toTitleCase(targetName)}"
     val generateVersionTask = project.registerSkikoTask<DefaultTask>(
-        "generateVersion${toTitleCase(platformType.name)}".withSuffix(isUikitSim = isUikitSim),
+        taskId.withSuffix(isUikitSim = isUikitSim),
         targetOs,
         targetArch
     ) {

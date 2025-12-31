@@ -12,17 +12,14 @@ import kotlin.collections.ArrayList
 
 inline fun <reified T : Task> TaskContainer.registerOrGetTask(
     name: String, crossinline fn: T.() -> Unit
-): Provider<T> {
-    val taskProvider =
-        if (name in names) named(name)
-        else register(name, T::class) { fn(this) }
-    return taskProvider.map { it as T }
-}
+): TaskProvider<T> =
+    if (name in names) named(name) as TaskProvider<T>
+    else register(name, T::class) { fn(this) }
 
 inline fun <reified T : Task> Project.registerSkikoTask(
     taskName: String,
     crossinline fn: T.() -> Unit
-): TaskProvider<T> = tasks.register(taskName, T::class) { fn() }
+): TaskProvider<T> = tasks.registerOrGetTask(taskName) { fn() }
 
 inline fun <reified T : Task> Project.registerSkikoTask(
     actionName: String,

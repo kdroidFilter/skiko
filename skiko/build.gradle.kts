@@ -72,6 +72,49 @@ kotlin {
         }
     }
 
+    if (supportTao) {
+        jvm("tao") {
+            compilations.all {
+                compileTaskProvider.configure {
+                    compilerOptions.jvmTarget.set(JvmTarget.JVM_1_8)
+                }
+            }
+            generateVersion(targetOs, targetArch, skiko)
+        }
+
+        val taoTarget = kotlin.targets.getByName("tao")
+        val taoCompilation = taoTarget.compilations.getByName("main")
+        val skikoTaoJar by tasks.registering(Jar::class) {
+            archiveBaseName.set("skiko-tao")
+            from(taoCompilation.output.allOutputs)
+        }
+        val targetSuffix = joinToTitleCamelCase(targetOs.id, targetArch.id)
+        val compileTaskName = "compileJvmBindings$targetSuffix"
+        val runtimeTaskName = "skikoJvmRuntimeJar$targetSuffix"
+        val existingRuntimeJar =
+            tasks.names.find { it == runtimeTaskName }?.let { tasks.named<Jar>(it) }
+        val skikoTaoRuntimeJar = if (tasks.names.contains(compileTaskName) && existingRuntimeJar != null) {
+            existingRuntimeJar
+        } else {
+            skikoProjectContext.createSkikoJvmJarTask(targetOs, targetArch, skikoTaoJar)
+        }
+
+        tasks.register<JavaExec>("runTaoClock") {
+            group = "application"
+            description = "Run the Tao + Skiko clock sample (macOS Metal)."
+            dependsOn(skikoTaoRuntimeJar)
+            dependsOn(taoCompilation.compileTaskProvider)
+            mainClass.set("org.jetbrains.skiko.sample.TaoClockKt")
+            jvmArgs("-XstartOnFirstThread")
+            classpath = files(
+                taoCompilation.output.allOutputs,
+                taoCompilation.runtimeDependencyFiles,
+                skikoTaoRuntimeJar.flatMap { it.archiveFile }
+            )
+            systemProperty("skiko.tao.enabled", "true")
+        }
+    }
+
     if (supportAndroid) {
         androidTarget("android") {
             publishLibraryVariants("release")
@@ -185,6 +228,12 @@ kotlin {
 
     skikoProjectContext.awtMainSourceSet?.dependencies {
         implementation(libs.jetbrainsRuntime.api)
+    }
+
+    skikoProjectContext.taoMainSourceSet?.dependencies {
+        implementation(kotlin("stdlib"))
+        implementation(libs.coroutines.core.jvm)
+        implementation("io.github.kdroidfilter.taokt:taokt-bindings")
     }
 
     skikoProjectContext.awtTestSourceSet?.dependencies {

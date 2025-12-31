@@ -11,6 +11,19 @@ val SkikoProjectContext.awtMainSourceSet get() = if (project.supportAwt) kotlin.
 
 val SkikoProjectContext.awtTestSourceSet get() = if (project.supportAwt) kotlin.sourceSets.getByName("awtTest") else null
 
+val SkikoProjectContext.taoMainSourceSet get() = if (project.supportTao) kotlin.sourceSets.getByName("taoMain") else null
+
+val SkikoProjectContext.taoTestSourceSet get() = if (project.supportTao) kotlin.sourceSets.getByName("taoTest") else null
+
+// Tao Kotlin/Native source sets
+val SkikoProjectContext.taoCommonMainSourceSet get() = if (project.supportTao) kotlin.sourceSets.findByName("taoCommonMain") else null
+
+val SkikoProjectContext.taoCommonTestSourceSet get() = if (project.supportTao) kotlin.sourceSets.findByName("taoCommonTest") else null
+
+val SkikoProjectContext.taoNativeMainSourceSet get() = if (project.supportTao) kotlin.sourceSets.findByName("taoNativeMain") else null
+
+val SkikoProjectContext.taoNativeTestSourceSet get() = if (project.supportTao) kotlin.sourceSets.findByName("taoNativeTest") else null
+
 val SkikoProjectContext.androidMainSourceSet get() = if (project.supportAndroid) kotlin.sourceSets.getByName("androidMain") else null
 
 val SkikoProjectContext.webTestSourceSet get() = if (project.supportWeb) kotlin.sourceSets.getByName("webTest") else null

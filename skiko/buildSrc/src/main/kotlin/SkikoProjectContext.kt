@@ -47,6 +47,7 @@ fun SkikoProjectContext.declareSkiaTasks() {
 
                 val skiaUrl = "$skiaBaseUrl/$artifactId.zip"
                 description = "downloads $skiaUrl"
+                acceptAnyCertificate(true)
 
                 onlyIfModified(true)
                 src(skiaUrl)
@@ -106,6 +107,9 @@ val Project.supportAndroid: Boolean
 
 val Project.supportAwt: Boolean
     get() = findProperty("skiko.awt.enabled") == "true" || isInIdea
+
+val Project.supportTao: Boolean
+    get() = findProperty("skiko.tao.enabled") == "true"
 
 val Project.supportAllNative: Boolean
     get() = findProperty("skiko.native.enabled") == "true" || isInIdea
