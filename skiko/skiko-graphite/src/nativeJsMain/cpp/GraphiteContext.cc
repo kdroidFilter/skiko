@@ -48,7 +48,7 @@ SKIKO_EXPORT KNativePointer org_jetbrains_skia_gpu_graphite_GraphiteContext__1nM
     return reinterpret_cast<KNativePointer>(context->makeRecorder(options).release());
 }
 
-SKIKO_EXPORT void org_jetbrains_skia_gpu_graphite_GraphiteContext__1nInsertRecording(
+SKIKO_EXPORT KInt org_jetbrains_skia_gpu_graphite_GraphiteContext__1nInsertRecording(
         KNativePointer contextPtr,
         KNativePointer recordingPtr,
         KInteropPointer waitSemaphoresPtrs,
@@ -56,7 +56,7 @@ SKIKO_EXPORT void org_jetbrains_skia_gpu_graphite_GraphiteContext__1nInsertRecor
         KInteropPointer signalSemaphoresPtrs,
         KInt signalSemaphoresCount) {
     auto context = reinterpret_cast<skgpu::graphite::Context*>(contextPtr);
-    if (!context) return;
+    if (!context) return skgpu::graphite::InsertStatus::kInvalidRecording;
 
     skgpu::graphite::InsertRecordingInfo info{};
     info.fRecording = reinterpret_cast<skgpu::graphite::Recording*>(recordingPtr);
@@ -85,7 +85,11 @@ SKIKO_EXPORT void org_jetbrains_skia_gpu_graphite_GraphiteContext__1nInsertRecor
     info.fNumSignalSemaphores = signalSemaphores.size();
     info.fSignalSemaphores = signalSemaphores.data();
 
-    context->insertRecording(info);
+    // Keep in sync with InsertStatus.kt, which maps these values by ordinal.
+    static_assert(skgpu::graphite::InsertStatus::kSuccess == 0 &&
+                  skgpu::graphite::InsertStatus::kOutOfOrderRecording == 5,
+                  "InsertStatus.kt is out of sync with skgpu::graphite::InsertStatus");
+    return static_cast<skgpu::graphite::InsertStatus::V>(context->insertRecording(info));
 }
 
 SKIKO_EXPORT void org_jetbrains_skia_gpu_graphite_GraphiteContext__1nSubmit(

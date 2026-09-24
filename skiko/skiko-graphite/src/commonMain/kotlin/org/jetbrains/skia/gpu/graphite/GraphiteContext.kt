@@ -101,19 +101,25 @@ class GraphiteContext internal constructor(ptr: NativePointer) : Managed(ptr, _F
      * The work is sent to the GPU by a subsequent call to [submit].
      *
      * @param recording recording to insert.
+     * @return [InsertStatus.SUCCESS] if the recording was added, or the reason it was rejected.
      */
-    fun insertRecording(recording: Recording) {
+    fun insertRecording(recording: Recording): InsertStatus =
         insertRecording(InsertRecordingInfo(recording))
-    }
 
     /**
      * Adds a recording and associated submission metadata (such as wait/signal semaphores)
      * to this context's pending GPU work.
      *
+     * Recordings of a [Recorder] must be inserted in the order they were snapped: once a recording
+     * is skipped, later recordings of the same recorder are rejected with
+     * [InsertStatus.OUT_OF_ORDER_RECORDING] until the skipped one is inserted.
+     *
      * @param info recording insertion parameters.
+     * @return [InsertStatus.SUCCESS] if the recording was added, or the reason it was rejected.
      */
-    fun insertRecording(info: InsertRecordingInfo) {
+    fun insertRecording(info: InsertRecordingInfo): InsertStatus {
         try {
+            require(!info.recording.isClosed) { "Recording is closed" }
             Stats.onNativeCall()
             val waitSemPtrs = NativePointerArray(info.waitSemaphores.size)
             val signalSemPtrs = NativePointerArray(info.signalSemaphores.size)
@@ -127,7 +133,7 @@ class GraphiteContext internal constructor(ptr: NativePointer) : Managed(ptr, _F
                 require(!semaphore.isClosed) { "Signal semaphore is closed" }
                 signalSemPtrs[index] = semaphore.nativePtr
             }
-            interopScope {
+            val status = interopScope {
                 _nInsertRecording(
                     nativePtr,
                     info.recording.nativePtr,
@@ -137,6 +143,7 @@ class GraphiteContext internal constructor(ptr: NativePointer) : Managed(ptr, _F
                     info.signalSemaphores.size,
                 )
             }
+            return InsertStatus.entries[status]
         } finally {
             reachabilityBarrier(this)
             reachabilityBarrier(info.recording)
@@ -195,7 +202,7 @@ private external fun _nInsertRecording(
     waitSemaphoresCount: Int,
     signalSemaphoresPtrs: InteropPointer,
     signalSemaphoresCount: Int,
-)
+): Int
 
 @ExternalSymbolName("org_jetbrains_skia_gpu_graphite_GraphiteContext__1nSubmit")
 private external fun _nSubmit(contextPtr: NativePointer, syncCpu: Boolean)

@@ -83,7 +83,7 @@ Java_org_jetbrains_skia_gpu_graphite_GraphiteContextKt__1nMakeRecorder(
     return reinterpret_cast<jlong>(context->makeRecorder(options).release());
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JNIEXPORT jint JNICALL
 Java_org_jetbrains_skia_gpu_graphite_GraphiteContextKt__1nInsertRecording(
         JNIEnv* env,
         jclass,
@@ -95,7 +95,7 @@ Java_org_jetbrains_skia_gpu_graphite_GraphiteContextKt__1nInsertRecording(
         jint signalSemaphoresCount) {
     auto context = reinterpret_cast<skgpu::graphite::Context*>(
             static_cast<uintptr_t>(contextPtr));
-    if (!context) return;
+    if (!context) return skgpu::graphite::InsertStatus::kInvalidRecording;
 
     skgpu::graphite::InsertRecordingInfo info{};
     info.fRecording = reinterpret_cast<skgpu::graphite::Recording*>(
@@ -129,7 +129,11 @@ Java_org_jetbrains_skia_gpu_graphite_GraphiteContextKt__1nInsertRecording(
     info.fNumSignalSemaphores = signalSemaphores.size();
     info.fSignalSemaphores = signalSemaphores.data();
 
-    context->insertRecording(info);
+    // Keep in sync with InsertStatus.kt, which maps these values by ordinal.
+    static_assert(skgpu::graphite::InsertStatus::kSuccess == 0 &&
+                  skgpu::graphite::InsertStatus::kOutOfOrderRecording == 5,
+                  "InsertStatus.kt is out of sync with skgpu::graphite::InsertStatus");
+    return static_cast<skgpu::graphite::InsertStatus::V>(context->insertRecording(info));
 }
 
 extern "C" JNIEXPORT void JNICALL
