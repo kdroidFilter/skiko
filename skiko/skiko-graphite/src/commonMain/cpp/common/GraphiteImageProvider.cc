@@ -2,7 +2,6 @@
 
 #include "include/core/SkTiledImageUtils.h"
 #include "include/gpu/graphite/Image.h"
-#include "include/gpu/graphite/Recorder.h"
 #include "src/core/SkChecksum.h"
 
 #include <list>
@@ -10,6 +9,10 @@
 
 namespace {
 constexpr size_t kDefaultNumCachedImages = 256;
+// Textures uploaded by SkImages::TextureFromImage are not budgeted by the Recorder while the cache
+// holds them; once evicted, they are recycled by the Recorder's own resource cache. So this limit
+// is separate from, and smaller than, the Recorder's GPU budget.
+constexpr size_t kMaxCachedImageBytes = 64 * 1024 * 1024;
 
 class ImageKey {
 public:
@@ -39,8 +42,7 @@ struct ImageHash {
 };
 }  // namespace
 
-// LRU cache of uploaded images, bounded by count and by the Recorder's GPU budget. The cache holds
-// strong references, so its textures can't be purged by the Recorder's resource cache.
+// LRU cache of uploaded images, bounded by count and by size.
 struct SkikoGraphiteImageProvider::Impl {
     struct Entry {
         ImageKey key;
@@ -60,14 +62,14 @@ struct SkikoGraphiteImageProvider::Impl {
         return found->second->image;
     }
 
-    void insert(const ImageKey& key, sk_sp<SkImage> image, size_t maxBytes) {
+    void insert(const ImageKey& key, sk_sp<SkImage> image) {
         size_t bytes = image->textureSize();
         entries.push_front({key, std::move(image), bytes});
         index[key] = entries.begin();
         totalBytes += bytes;
-        // Always keep the newest entry, even if it exceeds the budget on its own.
+        // Always keep the newest entry, even if it exceeds the limit on its own.
         while (entries.size() > 1 &&
-               (entries.size() > kDefaultNumCachedImages || totalBytes > maxBytes)) {
+               (entries.size() > kDefaultNumCachedImages || totalBytes > kMaxCachedImageBytes)) {
             totalBytes -= entries.back().bytes;
             index.erase(entries.back().key);
             entries.pop_back();
@@ -97,6 +99,6 @@ sk_sp<SkImage> SkikoGraphiteImageProvider::findOrCreate(
     sk_sp<SkImage> textureImage = SkImages::TextureFromImage(recorder, image, requiredProperties);
     if (!textureImage) return nullptr;
 
-    fImpl->insert(key, textureImage, recorder->maxBudgetedBytes());
+    fImpl->insert(key, textureImage);
     return textureImage;
 }
