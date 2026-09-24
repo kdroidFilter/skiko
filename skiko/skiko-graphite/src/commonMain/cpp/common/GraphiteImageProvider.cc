@@ -2,11 +2,14 @@
 
 #include "include/core/SkTiledImageUtils.h"
 #include "include/gpu/graphite/Image.h"
+#include "include/gpu/graphite/Recorder.h"
 #include "src/core/SkChecksum.h"
-#include "src/core/SkLRUCache.h"
+
+#include <list>
+#include <unordered_map>
 
 namespace {
-constexpr int kDefaultNumCachedImages = 256;
+constexpr size_t kDefaultNumCachedImages = 256;
 
 class ImageKey {
 public:
@@ -36,8 +39,40 @@ struct ImageHash {
 };
 }  // namespace
 
+// LRU cache of uploaded images, bounded by count and by the Recorder's GPU budget. The cache holds
+// strong references, so its textures can't be purged by the Recorder's resource cache.
 struct SkikoGraphiteImageProvider::Impl {
-    SkLRUCache<ImageKey, sk_sp<SkImage>, ImageHash> cache{kDefaultNumCachedImages};
+    struct Entry {
+        ImageKey key;
+        sk_sp<SkImage> image;
+        size_t bytes;
+    };
+
+    // Most recently used first.
+    std::list<Entry> entries;
+    std::unordered_map<ImageKey, std::list<Entry>::iterator, ImageHash> index;
+    size_t totalBytes = 0;
+
+    sk_sp<SkImage> find(const ImageKey& key) {
+        auto found = index.find(key);
+        if (found == index.end()) return nullptr;
+        entries.splice(entries.begin(), entries, found->second);
+        return found->second->image;
+    }
+
+    void insert(const ImageKey& key, sk_sp<SkImage> image, size_t maxBytes) {
+        size_t bytes = image->textureSize();
+        entries.push_front({key, std::move(image), bytes});
+        index[key] = entries.begin();
+        totalBytes += bytes;
+        // Always keep the newest entry, even if it exceeds the budget on its own.
+        while (entries.size() > 1 &&
+               (entries.size() > kDefaultNumCachedImages || totalBytes > maxBytes)) {
+            totalBytes -= entries.back().bytes;
+            index.erase(entries.back().key);
+            entries.pop_back();
+        }
+    }
 };
 
 SkikoGraphiteImageProvider::SkikoGraphiteImageProvider() : fImpl(std::make_unique<Impl>()) {}
@@ -53,14 +88,15 @@ sk_sp<SkImage> SkikoGraphiteImageProvider::findOrCreate(
         const SkImage* image,
         SkImage::RequiredProperties requiredProperties) {
     if (!requiredProperties.fMipmapped) {
-        if (auto cached = fImpl->cache.find(ImageKey(image, true))) return *cached;
+        if (auto cached = fImpl->find(ImageKey(image, true))) return cached;
     }
 
     ImageKey key(image, requiredProperties.fMipmapped);
-    if (auto cached = fImpl->cache.find(key)) return *cached;
+    if (auto cached = fImpl->find(key)) return cached;
 
     sk_sp<SkImage> textureImage = SkImages::TextureFromImage(recorder, image, requiredProperties);
     if (!textureImage) return nullptr;
 
-    return *fImpl->cache.insert(key, std::move(textureImage));
+    fImpl->insert(key, textureImage, recorder->maxBudgetedBytes());
+    return textureImage;
 }
