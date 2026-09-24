@@ -85,6 +85,10 @@ SKIKO_EXPORT KInt org_jetbrains_skia_gpu_graphite_GraphiteContext__1nInsertRecor
     info.fNumSignalSemaphores = signalSemaphores.size();
     info.fSignalSemaphores = signalSemaphores.data();
 
+    // Keep in sync with InsertStatus.kt, which maps these values by ordinal.
+    static_assert(skgpu::graphite::InsertStatus::kSuccess == 0 &&
+                  skgpu::graphite::InsertStatus::kOutOfOrderRecording == 5,
+                  "InsertStatus.kt is out of sync with skgpu::graphite::InsertStatus");
     return static_cast<skgpu::graphite::InsertStatus::V>(context->insertRecording(info));
 }
 

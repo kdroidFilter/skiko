@@ -111,8 +111,8 @@ class GraphiteContext internal constructor(ptr: NativePointer) : Managed(ptr, _F
      * to this context's pending GPU work.
      *
      * Recordings of a [Recorder] must be inserted in the order they were snapped: once a recording
-     * is skipped, every later recording of the same recorder is rejected with
-     * [InsertStatus.OUT_OF_ORDER_RECORDING].
+     * is skipped, later recordings of the same recorder are rejected with
+     * [InsertStatus.OUT_OF_ORDER_RECORDING] until the skipped one is inserted.
      *
      * @param info recording insertion parameters.
      * @return [InsertStatus.SUCCESS] if the recording was added, or the reason it was rejected.

@@ -24,8 +24,9 @@ enum class InsertStatus {
 
     /**
      * The recording was not inserted in the order it was snapped from its [Recorder], e.g. because
-     * a previous recording of the same recorder was never inserted. No command buffer changes were
-     * made, but every later recording of that recorder will be rejected as well.
+     * a previous recording of the same recorder was skipped. No command buffer changes were made,
+     * but later recordings of that recorder are rejected as well until the skipped one is inserted;
+     * if it was closed, the recorder can no longer be used with this context.
      */
     OUT_OF_ORDER_RECORDING,
 }
