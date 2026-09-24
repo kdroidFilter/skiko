@@ -1,8 +1,8 @@
 #include <jni.h>
 
-#include "include/gpu/graphite/Recorder.h"
+#include "GraphiteRecorder.hh"
 
-static void deleteRecorder(skgpu::graphite::Recorder* recorder) {
+static void deleteRecorder(SkikoGraphiteRecorder* recorder) {
     delete recorder;
 }
 
@@ -14,7 +14,7 @@ Java_org_jetbrains_skia_gpu_graphite_RecorderKt__1nGetRecorderFinalizer(JNIEnv*,
 extern "C" JNIEXPORT jlong JNICALL
 Java_org_jetbrains_skia_gpu_graphite_RecorderKt__1nSnap(
         JNIEnv*, jclass, jlong recorderPtr) {
-    auto recorder = reinterpret_cast<skgpu::graphite::Recorder*>(
+    auto recorder = reinterpret_cast<SkikoGraphiteRecorder*>(
             static_cast<uintptr_t>(recorderPtr));
     return reinterpret_cast<jlong>(recorder->snap().release());
 }

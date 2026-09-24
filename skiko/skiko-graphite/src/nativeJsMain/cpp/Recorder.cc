@@ -1,8 +1,8 @@
 #include "common.h"
 
-#include "include/gpu/graphite/Recorder.h"
+#include "GraphiteRecorder.hh"
 
-static void deleteRecorder(skgpu::graphite::Recorder* recorder) {
+static void deleteRecorder(SkikoGraphiteRecorder* recorder) {
     delete recorder;
 }
 
@@ -12,6 +12,6 @@ SKIKO_EXPORT KNativePointer org_jetbrains_skia_gpu_graphite_Recorder__1nGetFinal
 
 SKIKO_EXPORT KNativePointer org_jetbrains_skia_gpu_graphite_Recorder__1nSnap(
         KNativePointer recorderPtr) {
-    auto recorder = reinterpret_cast<skgpu::graphite::Recorder*>(recorderPtr);
+    auto recorder = reinterpret_cast<SkikoGraphiteRecorder*>(recorderPtr);
     return reinterpret_cast<KNativePointer>(recorder->snap().release());
 }

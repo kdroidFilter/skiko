@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "GraphiteImageProvider.hh"
+#include "GraphiteRecorder.hh"
 #include "include/gpu/graphite/BackendSemaphore.h"
 #include "include/gpu/graphite/Context.h"
 #include "include/gpu/graphite/ContextOptions.h"
@@ -80,7 +81,9 @@ Java_org_jetbrains_skia_gpu_graphite_GraphiteContextKt__1nMakeRecorder(
             static_cast<uintptr_t>(contextPtr));
     skgpu::graphite::RecorderOptions options{};
     options.fImageProvider = SkikoGraphiteImageProvider::Make();
-    return reinterpret_cast<jlong>(context->makeRecorder(options).release());
+    auto recorder = context->makeRecorder(options);
+    if (!recorder) return 0;
+    return reinterpret_cast<jlong>(new SkikoGraphiteRecorder(std::move(recorder)));
 }
 
 extern "C" JNIEXPORT void JNICALL

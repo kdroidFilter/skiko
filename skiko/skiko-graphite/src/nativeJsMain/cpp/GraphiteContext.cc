@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "GraphiteImageProvider.hh"
+#include "GraphiteRecorder.hh"
 
 #include "include/gpu/graphite/BackendSemaphore.h"
 #include "include/gpu/graphite/Context.h"
@@ -45,7 +46,9 @@ SKIKO_EXPORT KNativePointer org_jetbrains_skia_gpu_graphite_GraphiteContext__1nM
     auto context = reinterpret_cast<skgpu::graphite::Context*>(contextPtr);
     skgpu::graphite::RecorderOptions options{};
     options.fImageProvider = SkikoGraphiteImageProvider::Make();
-    return reinterpret_cast<KNativePointer>(context->makeRecorder(options).release());
+    auto recorder = context->makeRecorder(options);
+    if (!recorder) return nullptr;
+    return reinterpret_cast<KNativePointer>(new SkikoGraphiteRecorder(std::move(recorder)));
 }
 
 SKIKO_EXPORT void org_jetbrains_skia_gpu_graphite_GraphiteContext__1nInsertRecording(
